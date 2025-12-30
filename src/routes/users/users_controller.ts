@@ -6,7 +6,7 @@ import { set } from "mongoose";
 
 const userRoute = new Elysia({ prefix: "/api/users" })
 
-  // ----------------------------- SIGNUP ROUTES -----------------------------
+  // ----------------------------- SIGNUP ROUTE -----------------------------
   /**
    * @api [POST] /api/users/signup
    * @description Create a new user account
@@ -74,7 +74,7 @@ const userRoute = new Elysia({ prefix: "/api/users" })
     }
   )
 
-  // ----------------------------- GET ALL USERS ROUTES -----------------------------
+  // ----------------------------- GET ALL USERS ROUTE -----------------------------
   /**
    * @api [GET] /api/users/
    * @description Get all users
@@ -103,7 +103,7 @@ const userRoute = new Elysia({ prefix: "/api/users" })
     }
   })
 
-  // ----------------------------- GET USER BY ID ROUTES -----------------------------
+  // ----------------------------- GET USER BY ID ROUTE -----------------------------
   /**
    * @api [GET] /api/users/
    * @description Get a single user
@@ -132,7 +132,7 @@ const userRoute = new Elysia({ prefix: "/api/users" })
     }
   })
 
-  // ----------------------------- LOGIN ROUTES -----------------------------
+  // ----------------------------- LOGIN ROUTE -----------------------------
   /**
    * @api [POST] /api/users/login
    * @description Login a user
@@ -196,7 +196,7 @@ const userRoute = new Elysia({ prefix: "/api/users" })
     }
   )
 
-  // ----------------------------- DELETE ROUTES -----------------------------
+  // ----------------------------- DELETE USER ROUTE -----------------------------
   /**
    * @api [DELETE] /api/users/deleted/:id
    * @description Delete a single user
