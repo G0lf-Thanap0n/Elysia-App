@@ -23,6 +23,7 @@ export const mongoosesPlugin =
     return app
       .onStart(async () => {
         console.log("🔄 Connecting to MongoDB...");
+
         try {
           const conn = await mongoose.connect(uri);
           console.log("✅ mongoose.connect resolved:", conn.connection.name);

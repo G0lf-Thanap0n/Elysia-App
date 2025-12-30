@@ -33,13 +33,12 @@ userSchema.methods.matchPassword = async function (enteredPassword: string) {
 };
 
 // Hash password before saving with Bun
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("user_password")) return next();
+userSchema.pre("save", async function () {
+  if (!this.isModified("user_password")) return;
   this.user_password = await Bun.password.hash(this.user_password, {
     algorithm: "bcrypt",
     cost: 10,
   });
-  next();
 });
 
 export const User = model<UserDoc>("User", userSchema, "users");
