@@ -2,8 +2,21 @@ import { Elysia } from "elysia";
 import { mongoosesPlugin } from "../config/mongoose";
 import { cors } from "@elysiajs/cors";
 import cookie from "@elysiajs/cookie";
+import { rateLimit } from "elysia-rate-limit";
 
 const app = new Elysia()
+  .use(
+    rateLimit({
+      scoping: "global", // global rate limiting
+      duration: 60 * 1000, // 1 minute
+      max: 120, // limit 120 requests
+      errorResponse: new Response(
+        JSON.stringify({ status: "error", message: "rate-limit reached" }),
+        { status: 429, headers: { "Content-Type": "application/json" } }
+      ),
+    })
+  )
+
   .use(
     cors({
       origin: [

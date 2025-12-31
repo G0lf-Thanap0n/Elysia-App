@@ -2,7 +2,6 @@ import { Elysia, t } from "elysia";
 import { User } from "../../../model/userModel";
 import { jwt } from "../../../utils/jwt";
 import { LoginBody, SignupBody } from "./users_schema";
-import { set } from "mongoose";
 
 const userRoute = new Elysia({ prefix: "/api/users" })
 
@@ -36,7 +35,7 @@ const userRoute = new Elysia({ prefix: "/api/users" })
           user_password,
         });
 
-        // check if user creation was successful (Maybe comment line 31)
+        // check if user creation was successful
         if (!newUser) {
           set.status = 400;
           throw new Error("User creation failed");
@@ -51,7 +50,6 @@ const userRoute = new Elysia({ prefix: "/api/users" })
         // respond with user data and token successfully
         set.status = 201;
         return {
-          status: set.status,
           success: true,
           data: { accessToken },
           user: {
@@ -105,13 +103,14 @@ const userRoute = new Elysia({ prefix: "/api/users" })
 
   // ----------------------------- GET USER BY ID ROUTE -----------------------------
   /**
-   * @api [GET] /api/users/
+   * @api [GET] /api/users/:id
    * @description Get a single user
    * @action public
    */
   .get("/:id", async ({ params, set }) => {
     const { id } = params;
     try {
+      // Find user by ID
       const user = await User.findById(id).select("-user_password");
       if (!user) {
         set.status = 404;
