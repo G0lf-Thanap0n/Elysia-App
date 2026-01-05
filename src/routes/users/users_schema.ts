@@ -18,7 +18,15 @@ export const LoginBody = t.Object({
 
 export type LoginBodyType = typeof LoginBody.static;
 
-// Body schema for user logout route
-export const LogoutBody = t.Object({});
+// Cookie schema
+export const AuthCookie = t.Object({
+  access_token: t.Cookie(t.String(), {
+    httpOnly: true, // HTTP only cookie
+    secure: true, // Secure cookie
+    sameSite: "none", // Allow cross-site requests
+    maxAge: 15 * 60 * 1000, // 15 minutes
+    path: "/",
+  }),
+});
 
-export type LogoutBodyType = typeof LogoutBody.static;
+export type AuthCookieType = typeof AuthCookie.static;

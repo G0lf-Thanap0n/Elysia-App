@@ -1,10 +1,9 @@
 import { Elysia, t } from "elysia";
 import { User } from "../../../model/userModel";
 import { jwt } from "../../../utils/jwt";
-import { LoginBody, SignupBody } from "./users_schema";
+import { AuthCookie, LoginBody, SignupBody } from "./users_schema";
 
 const userRoute = new Elysia({ prefix: "/api/users" })
-
   // ----------------------------- SIGNUP ROUTE -----------------------------
   /**
    * @api [POST] /api/users/signup
@@ -135,11 +134,12 @@ const userRoute = new Elysia({ prefix: "/api/users" })
   /**
    * @api [POST] /api/users/login
    * @description Login a user
+   * @cookie Stateful access_token cookie
    * @action public
    */
   .post(
     "/login",
-    async ({ body, set }) => {
+    async ({ body, set, cookie: { access_token } }) => {
       try {
         // Check body
         if (!body) throw new Error("Nobody provided");
@@ -170,6 +170,16 @@ const userRoute = new Elysia({ prefix: "/api/users" })
           exp: "15m",
         });
 
+        // Set cookie stateful
+        access_token.set({
+          value: accessToken,
+          httpOnly: true,
+          maxAge: 15 * 60 * 1000,
+          secure: true,
+          sameSite: "none",
+          path: "/",
+        });
+
         set.status = 200;
         return {
           status: set.status,
@@ -181,7 +191,7 @@ const userRoute = new Elysia({ prefix: "/api/users" })
             user_lastname: user.user_lastname,
             user_email: user.user_email,
           },
-          message: "Login successfully",
+          message: "Login successfully (Cookie set!)",
         };
       } catch (err) {
         console.error("Error during login:", err);
@@ -191,7 +201,34 @@ const userRoute = new Elysia({ prefix: "/api/users" })
       }
     },
     {
+      cookie: AuthCookie,
       body: LoginBody,
+    }
+  )
+
+  // ----------------------------- LOGOUT ROUTE -----------------------------
+  /**
+   * @api [POST] /api/users/logout
+   * @description Logout a user
+   * @action public
+   */
+  .post(
+    "/logout",
+    async ({ set, cookie: { access_token } }) => {
+      try {
+        //Remove cookie
+        access_token.remove();
+
+        set.status = 200;
+        return { Message: "Logout successful (cookie removed!)" };
+      } catch (err) {
+        console.error("Error during logout:", err);
+        set.status = 500;
+        return { error: "Internal Server error" };
+      }
+    },
+    {
+      cookie: AuthCookie,
     }
   )
 
