@@ -3,6 +3,7 @@ import { mongoosesPlugin } from "../config/mongoose";
 import { cors } from "@elysiajs/cors";
 import cookie from "@elysiajs/cookie";
 import { rateLimit } from "elysia-rate-limit";
+import { userRoute } from "./routes/users/users_controller";
 
 const app = new Elysia()
   .use(
@@ -16,7 +17,6 @@ const app = new Elysia()
       ),
     })
   )
-
   .use(
     cors({
       origin: [
@@ -61,7 +61,9 @@ const app = new Elysia()
   )
   .use(mongoosesPlugin())
 
-  .get("/", () => "Hello Elysia")
+  .use(userRoute)
+
+  .get("/", () => "Hello Elysia with Bun! 🚀")
   .listen(Bun.env.PORT || 3000);
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`

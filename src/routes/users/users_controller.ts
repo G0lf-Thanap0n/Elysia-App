@@ -3,7 +3,7 @@ import { User } from "../../../model/userModel";
 import { jwt } from "../../../utils/jwt";
 import { AuthCookie, LoginBody, SignupBody } from "./users_schema";
 
-const userRoute = new Elysia({ prefix: "/api/users" })
+export const userRoute = new Elysia({ prefix: "/api/users" })
   // ----------------------------- SIGNUP ROUTE -----------------------------
   /**
    * @api [POST] /api/users/signup
@@ -17,7 +17,13 @@ const userRoute = new Elysia({ prefix: "/api/users" })
         // validate body
         if (!body) throw new Error("No body provided");
 
-        const { user_email, user_password, user_name, user_lastname } = body;
+        const {
+          user_email,
+          user_password,
+          user_username,
+          user_name,
+          user_lastname,
+        } = body;
 
         // check if user already exists
         const userExists = await User.findOne({ user_email });
@@ -30,6 +36,7 @@ const userRoute = new Elysia({ prefix: "/api/users" })
         const newUser = await User.create({
           user_name,
           user_lastname,
+          user_username,
           user_email,
           user_password,
         });
@@ -55,6 +62,7 @@ const userRoute = new Elysia({ prefix: "/api/users" })
             id: newUser._id,
             user_name: newUser.user_name,
             user_lastname: newUser.user_lastname,
+            user_username: newUser.user_username,
             user_email: newUser.user_email,
           },
           message: "Created user successfully",
@@ -73,7 +81,7 @@ const userRoute = new Elysia({ prefix: "/api/users" })
 
   // ----------------------------- GET ALL USERS ROUTE -----------------------------
   /**
-   * @api [GET] /api/users/
+   * @api [GET] /api/users
    * @description Get all users
    * @action admin
    */
@@ -142,19 +150,19 @@ const userRoute = new Elysia({ prefix: "/api/users" })
     async ({ body, set, cookie: { access_token } }) => {
       try {
         // Check body
-        if (!body) throw new Error("Nobody provided");
+        if (!body) return "Nobody provided";
 
         const { user_email, user_password } = body;
 
         if (!user_email || !user_password) {
-          throw new Error("Email and Password are required");
+          return "Email and Password are required";
         }
 
         // Check user by email
         const user = await User.findOne({ user_email });
         if (!user) {
           set.status = 401;
-          throw new Error("Invalid email address");
+          return { error: "Invalid email" };
         }
 
         // Check password
@@ -165,18 +173,28 @@ const userRoute = new Elysia({ prefix: "/api/users" })
         }
 
         // Generate token
-        const accessToken = jwt.sign({
+        const accessToken = await jwt.sign({
           data: { id: user._id },
           exp: "15m",
         });
 
         // Set cookie stateful
+        // access_token.set({
+        //   value: accessToken,
+        //   httpOnly: true,
+        //   maxAge: 15 * 60 * 1000,
+        //   secure: true,
+        //   sameSite: "none",
+        //   path: "/",
+        // });
+
+        // Set cookie stateful for testing in localhost
         access_token.set({
           value: accessToken,
-          httpOnly: true,
+          httpOnly: false,
           maxAge: 15 * 60 * 1000,
           secure: true,
-          sameSite: "none",
+          sameSite: "lax",
           path: "/",
         });
 
@@ -189,6 +207,7 @@ const userRoute = new Elysia({ prefix: "/api/users" })
             id: user._id,
             user_name: user.user_name,
             user_lastname: user.user_lastname,
+            user_username: user.user_username,
             user_email: user.user_email,
           },
           message: "Login successfully (Cookie set!)",
