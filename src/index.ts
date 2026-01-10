@@ -4,6 +4,7 @@ import { cors } from "@elysiajs/cors";
 import cookie from "@elysiajs/cookie";
 import { rateLimit } from "elysia-rate-limit";
 import { userRoute } from "./routes/users/users_controller";
+import { auth } from "../utils/auth";
 
 const app = new Elysia()
   .use(
@@ -64,6 +65,7 @@ const app = new Elysia()
   .use(userRoute)
 
   .get("/", () => "Hello Elysia with Bun! 🚀")
+  .mount(auth.handler)
   .listen(Bun.env.PORT || 3000);
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
