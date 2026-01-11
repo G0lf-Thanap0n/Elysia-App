@@ -62,11 +62,13 @@ const app = new Elysia()
   )
   .use(mongoosesPlugin())
 
+  // .mount("/api/auth", auth.handler)
+  .all("/api/auth/*", (context) => auth.handler(context.request))
+
   .use(userRoute)
 
   .get("/", () => "Hello Elysia with Bun! 🚀")
-  .mount(auth.handler)
-  .listen(Bun.env.PORT || 3000);
+  .listen(Bun.env.PORT || 3030);
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
 );

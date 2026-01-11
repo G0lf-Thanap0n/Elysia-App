@@ -17,7 +17,9 @@ export const auth = betterAuth({
   }),
 
   // Base URL for better-auth of your application
-  baseURL: Bun.env.BETTER_AUTH_URL || "http://localhost:3030",
+  baseURL: Bun.env.BETTER_AUTH_URL || "http://localhost:3030/api/auth",
+
+  secret: Bun.env.BETTER_AUTH_SECRET! || "your_random_better_auth_secret",
 
   // Better-auth Email and Password Auth Configuration
   emailAndPassword: {
@@ -26,16 +28,10 @@ export const auth = betterAuth({
 
   socialProviders: {
     google: {
-      clientId: Bun.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: Bun.env.GOOGLE_CLIENT_SECRET as string,
-      accessType: "offline",
-      prompt: "select_account consent",
-    },
-    facebook: {
-      clientId: Bun.env.FACEBOOK_CLIENT_ID as string,
-      clientSecret: Bun.env.FACEBOOK_CLIENT_SECRET as string,
-      accessType: "offline",
-      prompt: "select_account consent",
+      clientId: Bun.env.GOOGLE_CLIENT_ID!,
+      clientSecret: Bun.env.GOOGLE_CLIENT_SECRET!,
+      accessType: "offline", // to get refresh token
+      prompt: "select_account consent", // to always ask for consent
     },
   },
 });
