@@ -5,6 +5,7 @@ import cookie from "@elysiajs/cookie";
 import { rateLimit } from "elysia-rate-limit";
 import { userRoute } from "./routes/users/users_controller";
 import { auth } from "../utils/auth";
+import { htmlPage } from "../utils/landingPage";
 
 const app = new Elysia()
   .use(
@@ -62,12 +63,12 @@ const app = new Elysia()
   )
   .use(mongoosesPlugin())
 
-  // .mount("/api/auth", auth.handler)
   .all("/api/auth/*", (context) => auth.handler(context.request))
 
   .use(userRoute)
 
-  .get("/", () => "Hello Elysia with Bun! 🚀")
+  // Landing Page
+  .use(htmlPage)
   .listen(Bun.env.PORT || 3030);
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`

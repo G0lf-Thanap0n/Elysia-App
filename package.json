@@ -8,6 +8,7 @@
   "dependencies": {
     "@elysiajs/cookie": "^0.8.0",
     "@elysiajs/cors": "^1.4.0",
+    "@elysiajs/html": "^1.4.0",
     "better-auth": "^1.4.10",
     "elysia": "latest",
     "elysia-rate-limit": "^4.4.2",
