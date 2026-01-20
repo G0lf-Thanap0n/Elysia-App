@@ -1,6 +1,6 @@
 import { t } from "elysia";
 
-// ----------------------------- Body Schemas for SIGNUP ROUTE  -----------------------------
+// ----------------------------- Body Model for SIGNUP ROUTE  -----------------------------
 
 export const SignupBody = t.Object({
   user_name: t.String({ minLength: 1, maxLength: 50 }),
@@ -19,7 +19,7 @@ export const SignupBody = t.Object({
 
 export type SignupBodyType = typeof SignupBody.static;
 
-// ----------------------------- Body Schemas for LOGIN ROUTE  -----------------------------
+// ----------------------------- Body Model for LOGIN ROUTE  -----------------------------
 
 export const LoginBody = t.Object({
   user_email: t.String({ format: "email" }),
@@ -28,7 +28,7 @@ export const LoginBody = t.Object({
 
 export type LoginBodyType = typeof LoginBody.static;
 
-// ----------------------------- Cookie Schema  -----------------------------
+// ----------------------------- Cookie Model  -----------------------------
 
 // export const AuthCookie = t.Object({
 //   access_token: t.Cookie(t.String(), {

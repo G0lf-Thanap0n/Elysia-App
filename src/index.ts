@@ -3,7 +3,7 @@ import { mongoosesPlugin } from "../config/mongoose";
 import { cors } from "@elysiajs/cors";
 import cookie from "@elysiajs/cookie";
 import { rateLimit } from "elysia-rate-limit";
-import { userRoute } from "./routes/users/users_controller";
+import { userRoute } from "./routes/users/users.route";
 import { auth } from "../utils/auth";
 import { htmlPage } from "../utils/landingPage";
 
@@ -15,9 +15,9 @@ const app = new Elysia()
       max: 120, // limit 120 requests
       errorResponse: new Response(
         JSON.stringify({ status: "error", message: "rate-limit reached" }),
-        { status: 429, headers: { "Content-Type": "application/json" } }
+        { status: 429, headers: { "Content-Type": "application/json" } },
       ),
-    })
+    }),
   )
   .use(
     cors({
@@ -50,7 +50,7 @@ const app = new Elysia()
         "X-RateLimit-Remaining",
         "X-RateLimit-Reset",
       ],
-    })
+    }),
   )
   .use(
     cookie({
@@ -59,11 +59,11 @@ const app = new Elysia()
       path: "/",
       sameSite: "strict",
       secure: true,
-    })
+    }),
   )
   .use(mongoosesPlugin())
 
-  .all("/api/auth/*", (context) => auth.handler(context.request))
+  .mount(auth.handler)
 
   .use(userRoute)
 
@@ -71,5 +71,5 @@ const app = new Elysia()
   .use(htmlPage)
   .listen(Bun.env.PORT || 3030);
 console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
+  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,
 );
