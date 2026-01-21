@@ -3,7 +3,7 @@ import { mongoosesPlugin } from "../config/mongoose";
 import { cors } from "@elysiajs/cors";
 import cookie from "@elysiajs/cookie";
 import { rateLimit } from "elysia-rate-limit";
-import { userRoute } from "./routes/users/users.route";
+import { userRoute } from "./module/users/users.route";
 import { auth } from "../utils/auth";
 import { htmlPage } from "../utils/landingPage";
 

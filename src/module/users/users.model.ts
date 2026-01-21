@@ -19,7 +19,7 @@ export const SignupBody = t.Object({
 
 export type SignupBodyType = typeof SignupBody.static;
 
-// ----------------------------- Body Model for LOGIN ROUTE  -----------------------------
+// ----------------------------- Body Model  for LOGIN ROUTE  -----------------------------
 
 export const LoginBody = t.Object({
   user_email: t.String({ format: "email" }),
@@ -28,7 +28,23 @@ export const LoginBody = t.Object({
 
 export type LoginBodyType = typeof LoginBody.static;
 
+// ----------------------------- Body Model for UPDATE USER ROUTE  -----------------------------
+
+export const UpdateUserBody = t.Partial(
+  t.Object({
+    user_name: t.String({ minLength: 1, maxLength: 50 }),
+    user_lastname: t.String({ minLength: 1, maxLength: 50 }),
+    user_username: t.String({ minLength: 1, maxLength: 50 }),
+    user_email: t.String({ format: "email" }),
+  }),
+);
+
+export type UpdateUserBodyType = typeof UpdateUserBody.static;
+
 // ----------------------------- Cookie Model  -----------------------------
+export const AuthCookie = t.Object({
+  access_token: t.Optional(t.String()),
+});
 
 // export const AuthCookie = t.Object({
 //   access_token: t.Cookie(t.String(), {
@@ -39,9 +55,5 @@ export type LoginBodyType = typeof LoginBody.static;
 //     path: "/",
 //   }),
 // });
-
-export const AuthCookie = t.Object({
-  access_token: t.Optional(t.String()),
-});
 
 export type AuthCookieType = typeof AuthCookie.static;

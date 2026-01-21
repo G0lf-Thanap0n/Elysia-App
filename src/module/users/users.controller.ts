@@ -230,6 +230,67 @@ export const loginUser = async ({
   }
 };
 
+// ----------------------------- UPDATE USER CONTROLLER -----------------------------
+/**
+ * @api [POST] /api/users/update/:id
+ * @description Update a single user by id
+ * @action public
+ */
+interface UpdateUserBody {
+  user_name?: string;
+  user_lastname?: string;
+  user_username?: string;
+  user_email?: string;
+}
+
+export const updateUser = async ({
+  params,
+  body,
+  set,
+}: Context<{ body: UpdateUserBody }>) => {
+  try {
+    const { id } = params;
+    const { user_name, user_lastname, user_username, user_email } = body;
+
+    const user = await User.findById(id);
+
+    // check if user exists
+    if (!user) {
+      set.status = 404;
+      return { status: "error", message: "User not found" };
+    }
+
+    // check for body
+    if (!body) {
+      return { status: "error", message: "No body provided" };
+    }
+
+    // update user details
+    user.user_name = user_name || user.user_name;
+    user.user_lastname = user_lastname || user.user_lastname;
+    user.user_username = user_username || user.user_username;
+    user.user_email = user_email || user.user_email;
+    const updatedUser = await user.save();
+
+    if (!updatedUser) {
+      set.status = 400;
+      return { status: "error", message: "User update failed" };
+    }
+
+    // return updated user
+    set.status = 200;
+    return {
+      status: "success",
+      message: "User updated successfully",
+      data: updatedUser,
+    };
+  } catch (err) {
+    console.error("Error during updating user:", err);
+
+    set.status = 500;
+    return { error: "Internal Server Error" };
+  }
+};
 // ----------------------------- LOGOUT CONTROLLER -----------------------------
 /**
  * @api [POST] /api/users/logout

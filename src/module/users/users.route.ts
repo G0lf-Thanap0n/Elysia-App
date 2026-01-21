@@ -1,12 +1,18 @@
 import { Elysia, t } from "elysia";
-import { User } from "../../../model/userModel";
-import { AuthCookie, LoginBody, SignupBody } from "./users.model";
+import {
+  AuthCookie,
+  LoginBody,
+  SignupBody,
+  UpdateUserBody,
+} from "./users.model";
 import {
   getAllUsers,
   getUserById,
   signupUser,
+  updateUser,
   loginUser,
   deleteUser,
+  logoutUser,
 } from "./users.controller";
 
 export const userRoute = new Elysia({ prefix: "/api/users" })
@@ -48,31 +54,23 @@ export const userRoute = new Elysia({ prefix: "/api/users" })
     body: LoginBody,
   })
 
+  // ----------------------------- UPDATE USER CONTROLLER -----------------------------
+  /**
+   * @api [PATCH] /api/users/update/:id
+   * @description Update a single user by id
+   * @action public
+   */
+  .patch("/update/:id", updateUser, { body: UpdateUserBody })
+
   // ----------------------------- LOGOUT ROUTE -----------------------------
   /**
    * @route /api/users/logout
    * @description Logout a user
    * @action public
    */
-  .post(
-    "/logout",
-    async ({ set, cookie: { access_token } }) => {
-      try {
-        //Remove cookie
-        access_token.remove();
-
-        set.status = 200;
-        return { Message: "Logout successful (cookie removed!)" };
-      } catch (err) {
-        console.error("Error during logout:", err);
-        set.status = 500;
-        return { error: "Internal Server error" };
-      }
-    },
-    {
-      cookie: AuthCookie,
-    },
-  )
+  .post("/logout", logoutUser, {
+    cookie: AuthCookie,
+  })
 
   // ----------------------------- DELETE USER ROUTE -----------------------------
   /**
@@ -81,21 +79,3 @@ export const userRoute = new Elysia({ prefix: "/api/users" })
    * @action public
    */
   .delete("/deleted/:id", deleteUser);
-//   const { id } = params;
-//   try {
-//     const deleted = await User.findByIdAndDelete(id);
-
-//     if (!deleted) {
-//       set.status = 404;
-//       return { Error: "User not found" };
-//     }
-
-//     set.status = 200;
-//     return { Message: "user deleted successfully" };
-//   } catch (err) {
-//     console.error("Error during logout:", err);
-
-//     set.status = 500;
-//     return { error: "Internal Server error" };
-//   }
-// });
