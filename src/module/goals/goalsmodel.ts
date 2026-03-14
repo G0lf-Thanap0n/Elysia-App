@@ -2,9 +2,9 @@ import { t } from "elysia";
 
 // ----------------------------- Body Model for CREATE GOAL ROUTE  -----------------------------
 
-export const GoalBody = t.Object({
+export const CreateGoalBody = t.Object({
   goal_title: t.String(),
-  goal_description: t.String(),
+  goal_description: t.Optional(t.String()),
   goal_smart: t.Object({
     smart_specific: t.String(),
     smart_measurable: t.String(),
@@ -12,16 +12,18 @@ export const GoalBody = t.Object({
     smart_relevant: t.String(),
     smart_timeBound: t.String(),
   }),
-  goal_status: t.Union([
-    t.Literal("not started"),
-    t.Literal("in progress"),
-    t.Literal("completed"),
-  ]),
-  goal_tags: t.Array(t.String()),
-  goal_isPublic: t.Boolean(),
+  goal_status: t.Optional(
+    t.Union([
+      t.Literal("not started"),
+      t.Literal("in progress"),
+      t.Literal("completed"),
+    ]),
+  ),
+  goal_tags: t.Optional(t.Array(t.String())),
+  goal_isPublic: t.Optional(t.Boolean()),
 });
 
-export type GoalBodyType = typeof GoalBody.static;
+export type CreateGoalBodyType = typeof CreateGoalBody.static;
 
 // ----------------------------- Body Model for UPDATE GOAL ROUTE  -----------------------------
 export const UpdateGoalBody = t.Object({

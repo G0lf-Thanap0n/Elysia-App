@@ -1,5 +1,11 @@
 import { Context } from "elysia";
 import { Goal } from "../../../model/goalModel";
+import mongoose from "mongoose";
+import type { JWTPayload } from "jose";
+import { CreateGoalBodyType } from "./goalsmodel";
+
+// User context type from auth middleware
+type UserContext = { user: JWTPayload & { id?: string } };
 
 // ----------------------------- Get All Goals Controller -----------------------------
 /**
@@ -7,18 +13,49 @@ import { Goal } from "../../../model/goalModel";
  * @description get all goals
  * @action admin
  */
-export const getAllGoals = async ({ set }: Context) => {
+export const getAllGoals = async ({
+  set,
+  user,
+  query,
+}: Context & UserContext) => {
+  // pagination params
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 10;
+
   try {
     // find all goals
-    const goals = await Goal.find();
+    const [goals, total] = await Promise.all([
+      Goal.find({ user_id: user.id })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Goal.countDocuments({ user_id: user.id }),
+    ]);
+
+    if (goals.length === 0) {
+      set.status = 404;
+      return { success: false, message: "No goals found" };
+    }
+
     set.status = 200;
     return {
       success: true,
       data: goals,
       message: "Goals retrieved successfully",
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   } catch (err) {
     console.error("Error during fetching goals:", err);
+
+    if (err instanceof mongoose.Error) {
+      set.status = 503;
+      return { error: "Database unavailable" };
+    }
 
     set.status = 500;
     return { error: "Internal Server Error" };
@@ -61,35 +98,20 @@ export const getGoalById = async ({ params, set }: Context) => {
 /**
  * @api [POST] /api/goals/create
  * @description create goal
- * @action public
+ * @action authenticated
  */
-interface GoalCreateBody {
-  goal_title: string;
-  goal_description?: string;
-  goal_smart: {
-    smart_specific: string;
-    smart_measurable: string;
-    smart_achievable: string;
-    smart_relevant: string;
-    smart_timeBound: string;
-  };
-  goal_status?: "not started" | "in progress" | "completed";
-  goal_tags?: string[];
-  goal_isPublic?: boolean;
-}
-
-export const goalCreate = async ({
+export const createGoal = async ({
   body,
   set,
-}: Context<{ body: GoalCreateBody }>) => {
-  // check if body is provided
+  user,
+}: Context & UserContext) => {
   try {
-    if (!body) {
-      set.status = 400;
-      throw new Error("No body provided");
+    // Verify user is authenticated
+    if (!user?.id) {
+      set.status = 401;
+      return { error: "Unauthorized - User not authenticated" };
     }
 
-    // extract body fields
     const {
       goal_title,
       goal_description,
@@ -97,23 +119,17 @@ export const goalCreate = async ({
       goal_status = "not started",
       goal_tags = [],
       goal_isPublic = false,
-    } = body;
+    } = body as CreateGoalBodyType;
 
-    // create goal
     const createdGoal = await Goal.create({
       goal_title,
       goal_description,
       goal_smart,
       goal_status,
+      user_id: user.id,
       goal_tags,
       goal_isPublic,
     });
-
-    // check if goal created successfully
-    if (!createdGoal) {
-      set.status = 400;
-      throw new Error("Goal creation failed");
-    }
 
     set.status = 201;
     return {
@@ -122,7 +138,15 @@ export const goalCreate = async ({
       message: "Goal created successfully",
     };
   } catch (err) {
-    console.error("Error during creating goal:", err);
+    if (err instanceof mongoose.Error.ValidationError) {
+      set.status = 400;
+      return { error: "Invalid data", details: err.message };
+    }
+
+    if (err instanceof mongoose.Error) {
+      set.status = 503;
+      return { error: "Database unavailable" };
+    }
 
     set.status = 500;
     return { error: "Internal Server Error" };

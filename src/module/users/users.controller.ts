@@ -48,7 +48,7 @@ export const signupUser = async ({
       user_password,
     });
 
-    // check if user creation was successful
+    // check if user creation was failed
     if (!newUser) {
       set.status = 400;
       throw new Error("User creation failed");
@@ -56,7 +56,7 @@ export const signupUser = async ({
 
     // Generate token
     const accessToken = await jwt.sign({
-      data: { id: newUser._id },
+      data: { id: newUser._id.toString() },
       exp: "15m",
     });
 
@@ -184,7 +184,7 @@ export const loginUser = async ({
 
     // Generate token
     const accessToken = await jwt.sign({
-      data: { id: user._id },
+      data: { id: user._id.toString() },
       exp: "15m",
     });
 

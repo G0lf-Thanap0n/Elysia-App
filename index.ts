@@ -1,11 +1,12 @@
 import { Elysia } from "elysia";
-import { mongoosesPlugin } from "../config/mongoose";
+import { mongoosesPlugin } from "./config/mongoose";
 import { cors } from "@elysiajs/cors";
 import cookie from "@elysiajs/cookie";
 import { rateLimit } from "elysia-rate-limit";
-import { userRoute } from "./module/users/users.route";
-import { auth } from "../utils/auth";
-import { htmlPage } from "../utils/landingPage";
+import { userRoute } from "./src/module/users/users.route";
+import { goalRoute } from "./src/module/goals/goals.route";
+import { auth } from "./utils/betterauth";
+import { htmlPage } from "./utils/landingPage";
 
 const app = new Elysia()
   .use(
@@ -66,6 +67,8 @@ const app = new Elysia()
   .mount(auth.handler)
 
   .use(userRoute)
+
+  .use(goalRoute)
 
   // Landing Page
   .use(htmlPage)

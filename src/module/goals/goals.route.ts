@@ -1,14 +1,16 @@
 import Elysia from "elysia";
 import {
-  deleteGoalById,
   getAllGoals,
   getGoalById,
-  goalCreate,
+  createGoal,
   updateGoalById,
+  deleteGoalById,
 } from "./goals.controller";
-import { GoalBody, UpdateGoalBody } from "./goalsmodel";
+import { CreateGoalBody, UpdateGoalBody } from "./goalsmodel";
+import { authplugin } from "../../../middleware/authplugin";
 
 export const goalRoute = new Elysia({ prefix: "/api/goals" })
+  .use(authplugin)
 
   // ----------------------------- GET ALL GOALS ROUTE -----------------------------
   /**
@@ -30,10 +32,10 @@ export const goalRoute = new Elysia({ prefix: "/api/goals" })
   /**
    * @route /api/goals/create
    * @description Create goal
-   * @action public
+   * @action authenticated
    */
-  .post("/create", goalCreate, {
-    body: GoalBody,
+  .post("/create", createGoal, {
+    body: CreateGoalBody,
   })
 
   // ----------------------------- UPDATE GOAL ROUTE -----------------------------

@@ -4,7 +4,7 @@ import {
   LoginBody,
   SignupBody,
   UpdateUserBody,
-} from "./users.model";
+} from "./usersmodel";
 import {
   getAllUsers,
   getUserById,
@@ -16,6 +16,7 @@ import {
 } from "./users.controller";
 
 export const userRoute = new Elysia({ prefix: "/api/users" })
+
   // ----------------------------- SIGNUP ROUTE -----------------------------
   /**
    * @route /api/users/signup
@@ -54,7 +55,7 @@ export const userRoute = new Elysia({ prefix: "/api/users" })
     body: LoginBody,
   })
 
-  // ----------------------------- UPDATE USER CONTROLLER -----------------------------
+  // ----------------------------- UPDATE USER ROUTE -----------------------------
   /**
    * @api [PATCH] /api/users/update/:id
    * @description Update a single user by id

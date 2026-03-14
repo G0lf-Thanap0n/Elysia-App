@@ -3,12 +3,13 @@ import { model, Schema } from "mongoose";
 interface Smart {
   smart_specific: string;
   smart_measurable: string;
-  smart_achiveable: string;
+  smart_achievable: string;
   smart_relevant: string;
   smart_timeBound: string;
 }
 
 interface Goal {
+  user_id?: string;
   goal_title: string;
   goal_description?: string;
   goal_smart: Smart;
@@ -20,7 +21,7 @@ interface Goal {
 const smartSchema = new Schema<Smart>({
   smart_specific: { type: String, required: true },
   smart_measurable: { type: String, required: true },
-  smart_achiveable: { type: String, required: true },
+  smart_achievable: { type: String, required: true },
   smart_relevant: { type: String, required: true },
   smart_timeBound: { type: String, required: true },
 });
@@ -35,10 +36,11 @@ const goalSchema = new Schema<Goal>(
       enum: ["not started", "in progress", "completed"],
       default: "not started",
     },
+    user_id: { type: String, required: true },
     goal_tags: { type: [String], default: [] },
     goal_isPublic: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const Goal = model<Goal>("Goal", goalSchema, "goals");

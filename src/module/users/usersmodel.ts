@@ -1,7 +1,6 @@
 import { t } from "elysia";
 
 // ----------------------------- Body Model for SIGNUP ROUTE  -----------------------------
-
 export const SignupBody = t.Object({
   user_name: t.String({ minLength: 1, maxLength: 50 }),
   user_lastname: t.String({ minLength: 1, maxLength: 50 }),
@@ -20,7 +19,6 @@ export const SignupBody = t.Object({
 export type SignupBodyType = typeof SignupBody.static;
 
 // ----------------------------- Body Model  for LOGIN ROUTE  -----------------------------
-
 export const LoginBody = t.Object({
   user_email: t.String({ format: "email" }),
   user_password: t.String({ minLength: 6, maxLength: 50 }),
@@ -29,7 +27,6 @@ export const LoginBody = t.Object({
 export type LoginBodyType = typeof LoginBody.static;
 
 // ----------------------------- Body Model for UPDATE USER ROUTE  -----------------------------
-
 export const UpdateUserBody = t.Partial(
   t.Object({
     user_name: t.String({ minLength: 1, maxLength: 50 }),
