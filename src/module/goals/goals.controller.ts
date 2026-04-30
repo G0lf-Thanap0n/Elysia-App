@@ -89,6 +89,11 @@ export const getGoalById = async ({ params, set }: Context) => {
   } catch (err) {
     console.error("Error during fetching goal:", err);
 
+    if (err instanceof mongoose.Error) {
+      set.status = 503;
+      return { error: "Database unavailable" };
+    }
+
     set.status = 500;
     return { error: "Internal Server Error" };
   }
