@@ -60,6 +60,10 @@ export const signupUser = async ({
       exp: "15m",
     });
 
+    // Set user active status to true in DB
+    newUser.user_active = true;
+    await newUser.save();
+
     // respond with user data and token successfully
     set.status = 201;
     return {
@@ -71,6 +75,7 @@ export const signupUser = async ({
         user_lastname: newUser.user_lastname,
         user_username: newUser.user_username,
         user_email: newUser.user_email,
+        user_active: newUser.user_active,
       },
       message: "Created user successfully",
     };
@@ -82,7 +87,7 @@ export const signupUser = async ({
   }
 };
 
-// ----------------------------- GET ALL USERS CONTROLLER -----------------------------
+// ----------------------------- GET ALL USERS CONTROLLER (Maybe feat pagination🛠)-----------------------------
 /**
  * @api [GET] /api/users
  * @description Get all users
@@ -141,7 +146,7 @@ export const getUserById = async ({ params, set }: Context) => {
   }
 };
 
-// ----------------------------- LOGIN CONTROLLER -----------------------------
+// ----------------------------- LOGIN CONTROLLER 👷‍♂️(Work in progress for fixing) -----------------------------
 /**
  * @api [POST] /api/users/login
  * @description Login a user
@@ -208,6 +213,10 @@ export const loginUser = async ({
       path: "/",
     });
 
+    // Set user active status to true in DB
+    user.user_active = true;
+    await user.save();
+
     set.status = 200;
     return {
       status: set.status,
@@ -219,6 +228,7 @@ export const loginUser = async ({
         user_lastname: user.user_lastname,
         user_username: user.user_username,
         user_email: user.user_email,
+        user_active: user.user_active,
       },
       message: "Login successfully (Cookie set!)",
     };
@@ -232,7 +242,7 @@ export const loginUser = async ({
 
 // ----------------------------- UPDATE USER CONTROLLER -----------------------------
 /**
- * @api [POST] /api/users/update/:id
+ * @api [PATCH] /api/users/update/:id
  * @description Update a single user by id
  * @action public
  */
@@ -241,6 +251,7 @@ interface UpdateUserBody {
   user_lastname?: string;
   user_username?: string;
   user_email?: string;
+  user_image?: string | null;
 }
 
 export const updateUser = async ({
@@ -250,7 +261,8 @@ export const updateUser = async ({
 }: Context<{ body: UpdateUserBody }>) => {
   try {
     const { id } = params;
-    const { user_name, user_lastname, user_username, user_email } = body;
+    const { user_name, user_lastname, user_username, user_email, user_image } =
+      body;
 
     const user = await User.findById(id);
 
@@ -270,6 +282,7 @@ export const updateUser = async ({
     user.user_lastname = user_lastname || user.user_lastname;
     user.user_username = user_username || user.user_username;
     user.user_email = user_email || user.user_email;
+    user.user_image = user_image || user.user_image;
     const updatedUser = await user.save();
 
     if (!updatedUser) {
@@ -302,8 +315,14 @@ export const logoutUser = async ({
   cookie: { access_token },
 }: Context) => {
   try {
+    // const user = await User.findOne({user_active: true});
+
     //Remove cookie
     access_token.remove();
+
+    // Set user active status to false in DB (waitng for fixing👷‍♂️)
+    // user.user_active = false;
+    // await user.save();
 
     set.status = 200;
     return { Message: "Logout successful (cookie removed!)" };

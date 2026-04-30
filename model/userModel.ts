@@ -7,6 +7,7 @@ interface User {
   user_email: string;
   user_password: string;
   user_role: "User" | "Admin";
+  user_active: boolean;
   user_image?: string | null;
   user_goals: string[];
 }
@@ -29,6 +30,10 @@ const userSchema = new Schema<UserDoc>(
     user_email: { type: String, required: true, unique: true, trim: true },
     user_password: { type: String, required: true },
     user_role: { type: String, enum: ["User", "Admin"], default: "User" },
+    user_active: {
+      type: Boolean,
+      default: true,
+    },
     user_image: { type: String, default: null },
     user_goals: { type: [String], default: [] },
   },

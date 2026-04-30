@@ -109,7 +109,7 @@ export const createGoal = async ({
   body,
   set,
   user,
-}: Context & UserContext) => {
+}: Context<{ body: CreateGoalBodyType }> & UserContext) => {
   try {
     // Verify user is authenticated
     if (!user?.id) {
@@ -124,7 +124,7 @@ export const createGoal = async ({
       goal_status = "not started",
       goal_tags = [],
       goal_isPublic = false,
-    } = body as CreateGoalBodyType;
+    } = body;
 
     const createdGoal = await Goal.create({
       goal_title,
