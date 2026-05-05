@@ -1,6 +1,11 @@
 import { Context } from "elysia";
 import { User } from "../../../model/userModel";
 import { jwt } from "../../../utils/jwt";
+import {
+  LoginBodyType,
+  SignupBodyType,
+  UpdateUserBodyType,
+} from "./usersmodel";
 
 // ----------------------------- SIGNUP CONTROLLER -----------------------------
 /**
@@ -8,18 +13,11 @@ import { jwt } from "../../../utils/jwt";
  * @description Create a new user account
  * @action public
  */
-interface SignupBody {
-  user_email: string;
-  user_password: string;
-  user_username: string;
-  user_name: string;
-  user_lastname: string;
-}
 
 export const signupUser = async ({
   body,
   set,
-}: Context<{ body: SignupBody }>) => {
+}: Context<{ body: SignupBodyType }>) => {
   try {
     // validate body
     if (!body) throw new Error("No body provided");
@@ -94,8 +92,9 @@ export const signupUser = async ({
  * @action admin
  */
 export const getAllUsers = async ({ set }: Context) => {
-  const users = await User.find().select("-user_password");
   try {
+    const users = await User.find().select("-user_password");
+
     if (!users || users.length === 0) {
       set.status = 404;
       return { error: "No users found" };
@@ -146,31 +145,31 @@ export const getUserById = async ({ params, set }: Context) => {
   }
 };
 
-// ----------------------------- LOGIN CONTROLLER 👷‍♂️(Work in progress for fixing) -----------------------------
+// ----------------------------- LOGIN CONTROLLER -----------------------------
 /**
  * @api [POST] /api/users/login
  * @description Login a user
  * @cookie Stateful access_token cookie
  * @action public
  */
-interface LoginBody {
-  user_email: string;
-  user_password: string;
-}
 
 export const loginUser = async ({
   body,
   set,
   cookie: { access_token },
-}: Context<{ body: LoginBody }>) => {
+}: Context<{ body: LoginBodyType }>) => {
   try {
     // Check body
-    if (!body) return "Nobody provided";
+    if (!body) {
+      set.status = 400;
+      return { error: "No body provided" };
+    }
 
     const { user_email, user_password } = body;
 
     if (!user_email || !user_password) {
-      return "Email and Password are required";
+      set.status = 400;
+      return { error: "Email and Password are required" };
     }
 
     // Check user by email
@@ -184,7 +183,7 @@ export const loginUser = async ({
     const isMatch = await user.matchPassword(user_password);
     if (!isMatch) {
       set.status = 401;
-      throw new Error("Invalid password");
+      return { error: "Invalid password" };
     }
 
     // Generate token
@@ -236,7 +235,7 @@ export const loginUser = async ({
     console.error("Error during login:", err);
 
     set.status = 500;
-    return { Error: "Internal Server error" };
+    return { error: "Internal Server Error" };
   }
 };
 
@@ -246,19 +245,12 @@ export const loginUser = async ({
  * @description Update a single user by id
  * @action public
  */
-interface UpdateUserBody {
-  user_name?: string;
-  user_lastname?: string;
-  user_username?: string;
-  user_email?: string;
-  user_image?: string | null;
-}
 
 export const updateUser = async ({
   params,
   body,
   set,
-}: Context<{ body: UpdateUserBody }>) => {
+}: Context<{ body: UpdateUserBodyType }>) => {
   try {
     const { id } = params;
     const { user_name, user_lastname, user_username, user_email, user_image } =
@@ -310,22 +302,30 @@ export const updateUser = async ({
  * @description Logout a user
  * @action public
  */
+
 export const logoutUser = async ({
   set,
   cookie: { access_token },
 }: Context) => {
   try {
-    // const user = await User.findOne({user_active: true});
+    const user = await User.findOne({ user_active: true });
+    if (!user) {
+      set.status = 404;
+      return { error: "No active user found" };
+    }
 
-    //Remove cookie
+    // Remove cookie
     access_token.remove();
 
-    // Set user active status to false in DB (waitng for fixing👷‍♂️)
-    // user.user_active = false;
-    // await user.save();
+    // Set user active status to false in DB
+    user.user_active = false;
+    await user.save();
 
     set.status = 200;
-    return { Message: "Logout successful (cookie removed!)" };
+    return {
+      message: "Logout successful (cookie removed!)",
+      user_active: user.user_active,
+    };
   } catch (err) {
     console.error("Error during logout:", err);
     set.status = 500;

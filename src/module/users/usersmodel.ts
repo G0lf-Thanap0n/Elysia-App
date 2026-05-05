@@ -18,7 +18,7 @@ export const SignupBody = t.Object({
 
 export type SignupBodyType = typeof SignupBody.static;
 
-// ----------------------------- Body Model  for LOGIN ROUTE  -----------------------------
+// ----------------------------- Body Model for LOGIN ROUTE  -----------------------------
 export const LoginBody = t.Object({
   user_email: t.String({ format: "email" }),
   user_password: t.String({ minLength: 6, maxLength: 50 }),
@@ -33,6 +33,12 @@ export const UpdateUserBody = t.Partial(
     user_lastname: t.String({ minLength: 1, maxLength: 50 }),
     user_username: t.String({ minLength: 1, maxLength: 50 }),
     user_email: t.String({ format: "email" }),
+    user_image: t
+      .File({
+        mimeTypes: ["image/jpeg", "image/png"],
+        maxSize: 5 * 1024 * 1024,
+      })
+      .nullish(),
   }),
 );
 
