@@ -50,3 +50,13 @@ export const UpdateGoalBody = t.Object({
 });
 
 export type UpdateGoalBodyType = typeof UpdateGoalBody.static;
+
+// ----------------------------- Query Model for GET ALL GOALS SUMMARY ROUTE  -----------------------------
+export const PeriodEnumQuery = t.Union([
+  t.Literal("today"),
+  t.Literal("last_7_days"),
+  t.Literal("last_30_days"),
+  t.Literal("last_year"),
+]);
+
+export type PeriodEnumQueryType = typeof PeriodEnumQuery.static;

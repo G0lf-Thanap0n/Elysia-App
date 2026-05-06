@@ -2,7 +2,8 @@ import { Context } from "elysia";
 import { Goal } from "../../../model/goalModel";
 import mongoose from "mongoose";
 import type { JWTPayload } from "jose";
-import { CreateGoalBodyType } from "./goalsmodel";
+import { CreateGoalBodyType, PeriodEnumQueryType } from "./goalsmodel";
+import { getPreviousPeriodRange, getStartDate } from "../../../utils/period";
 
 // User context type from auth middleware
 type UserContext = { user: JWTPayload & { id?: string } };
@@ -51,6 +52,131 @@ export const getAllGoals = async ({
     };
   } catch (err) {
     console.error("Error during fetching goals:", err);
+
+    if (err instanceof mongoose.Error) {
+      set.status = 503;
+      return { error: "Database unavailable" };
+    }
+
+    set.status = 500;
+    return { error: "Internal Server Error" };
+  }
+};
+
+// ----------------------------- Get All Goals Summary Controller -----------------------------
+/**
+ * @api [GET] /api/goals/summary
+ * @description get summary of all goals
+ * @action admin
+ */
+export const getAllGoalsSummary = async ({
+  set,
+  user,
+  query,
+}: Context<{ query: { period?: PeriodEnumQueryType } }> & UserContext) => {
+  // validate user ID
+  if (!user.id) {
+    set.status = 401;
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const period = query.period || "last_30_days";
+  const startDate = getStartDate(period);
+  const previousPeriod = getPreviousPeriodRange(period);
+
+  try {
+    // Get all goals for overall stats
+    const allGoals = await Goal.find({}).lean();
+
+    // Get goals in current period (created within period)
+    const goalsInPeriod = await Goal.find({
+      createdAt: { $gte: startDate },
+    }).lean();
+
+    // Get goals in previous period for trend calculation
+    const goalsInPreviousPeriod = await Goal.find({
+      createdAt: { $gte: previousPeriod.start, $lte: previousPeriod.end },
+    }).lean();
+
+    // Calculate status breakdown
+    const statusBreakdown = {
+      total: allGoals.length,
+      draft: allGoals.filter((g) => g.goal_status === "not started").length,
+      inProgress: allGoals.filter((g) => g.goal_status === "in progress")
+        .length,
+      completed: allGoals.filter((g) => g.goal_status === "completed").length,
+      abandoned: 0, // Not in current schema, defaulting to 0
+    };
+
+    // Calculate completion rates
+    const overallCompletionRate =
+      allGoals.length > 0
+        ? (allGoals.filter((g) => g.goal_status === "completed").length /
+            allGoals.length) *
+          100
+        : 0;
+
+    const thisPeriodCompletionRate =
+      goalsInPeriod.length > 0
+        ? (goalsInPeriod.filter((g) => g.goal_status === "completed").length /
+            goalsInPeriod.length) *
+          100
+        : 0;
+
+    const previousPeriodCompletionRate =
+      goalsInPreviousPeriod.length > 0
+        ? (goalsInPreviousPeriod.filter((g) => g.goal_status === "completed")
+            .length /
+            goalsInPreviousPeriod.length) *
+          100
+        : 0;
+
+    const trend = thisPeriodCompletionRate - previousPeriodCompletionRate;
+
+    // Calculate category breakdown from tags
+    // Note: Goal model doesn't have a category field, using tags as categories
+    const tagCounts = new Map<string, { count: number; completed: number }>();
+
+    for (const goal of allGoals) {
+      const tags = goal.goal_tags || [];
+      for (const tag of tags) {
+        const current = tagCounts.get(tag) || { count: 0, completed: 0 };
+        current.count++;
+        if (goal.goal_status === "completed") {
+          current.completed++;
+        }
+        tagCounts.set(tag, current);
+      }
+    }
+
+    const categoryBreakdown = Array.from(tagCounts.entries())
+      .map(([category, data]) => ({
+        category: category.toUpperCase(),
+        count: data.count,
+        completionRate:
+          data.count > 0 ? (data.completed / data.count) * 100 : 0,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5); // Top 5 categories
+
+    set.status = 200;
+    return {
+      success: true,
+      data: {
+        period,
+        generatedAt: new Date().toISOString(),
+        statusBreakdown,
+        completionRate: {
+          overall: Number(overallCompletionRate.toFixed(1)),
+          thisperiod: Number(thisPeriodCompletionRate.toFixed(1)),
+          trend: Number(trend.toFixed(1)),
+        },
+        categoryBreakdown,
+      },
+      message: "Goals summary retrieved successfully",
+    };
+  } catch (err) {
+    console.error("Error during fetching goals summary:", err);
 
     if (err instanceof mongoose.Error) {
       set.status = 503;

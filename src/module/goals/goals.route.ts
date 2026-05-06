@@ -1,17 +1,17 @@
-import Elysia from "elysia";
+import Elysia, { t } from "elysia";
 import {
   getAllGoals,
   getGoalById,
   createGoal,
   updateGoalById,
   deleteGoalById,
+  getAllGoalsSummary,
 } from "./goals.controller";
-import { CreateGoalBody, UpdateGoalBody } from "./goalsmodel";
+import { CreateGoalBody, PeriodEnumQuery, UpdateGoalBody } from "./goalsmodel";
 import { authplugin } from "../../../middleware/authplugin";
 
 export const goalRoute = new Elysia({ prefix: "/api/goals" })
   .use(authplugin)
-
   // ----------------------------- GET ALL GOALS ROUTE -----------------------------
   /**
    * @route /api/goals
@@ -118,6 +118,198 @@ export const goalRoute = new Elysia({ prefix: "/api/goals" })
         },
         403: { description: "Forbidden - Insufficient permissions" },
         404: { description: "Not Found - No goals found for this user" },
+        500: { description: "Internal Server Error" },
+        503: { description: "Service Unavailable - Database connection error" },
+      },
+    },
+  })
+
+  // ----------------------------- GET ALL GOAL SUMMARY ROUTE -----------------------------
+  /**
+   * @route /api/goals/summary
+   * @description Retrieve summary of all goals
+   * @action admin
+   */
+  .get("/summary", getAllGoalsSummary, {
+    query: t.Object({
+      period: t.Optional(PeriodEnumQuery),
+    }),
+    detail: {
+      summary: "Get goals summary",
+      description:
+        "Retrieve comprehensive summary statistics of all goals including status breakdown, completion rates, trends, and category analysis. Supports filtering by time period for trend analysis.",
+      tags: ["Goals"],
+      security: [
+        {
+          bearerAuth: [],
+        },
+      ],
+      parameters: [
+        {
+          name: "period",
+          in: "query",
+          description:
+            "Time period for summary analysis (defaults to last_30_days)",
+          required: false,
+          example: "last_30_days",
+          schema: {
+            type: "string",
+            enum: ["today", "last_7_days", "last_30_days", "last_year"],
+            default: "last_30_days",
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: "Successfully retrieved goals summary with statistics",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: {
+                    type: "object",
+                    properties: {
+                      period: {
+                        type: "string",
+                        enum: [
+                          "today",
+                          "last_7_days",
+                          "last_30_days",
+                          "last_year",
+                        ],
+                        description: "The requested analysis period",
+                        example: "last_30_days",
+                      },
+                      generatedAt: {
+                        type: "string",
+                        format: "date-time",
+                        description:
+                          "ISO 8601 timestamp when the summary was generated",
+                        example: "2026-05-07T10:30:00.000Z",
+                      },
+                      statusBreakdown: {
+                        type: "object",
+                        description:
+                          "Breakdown of goals by their current status",
+                        properties: {
+                          total: {
+                            type: "number",
+                            description: "Total number of goals",
+                            example: 15,
+                          },
+                          draft: {
+                            type: "number",
+                            description:
+                              "Number of goals with status 'not started'",
+                            example: 4,
+                          },
+                          inProgress: {
+                            type: "number",
+                            description:
+                              "Number of goals with status 'in progress'",
+                            example: 8,
+                          },
+                          completed: {
+                            type: "number",
+                            description:
+                              "Number of goals with status 'completed'",
+                            example: 3,
+                          },
+                          abandoned: {
+                            type: "number",
+                            description:
+                              "Number of abandoned goals (reserved for future use)",
+                            example: 0,
+                          },
+                        },
+                      },
+                      completionRate: {
+                        type: "object",
+                        description: "Goal completion metrics and trends",
+                        properties: {
+                          overall: {
+                            type: "number",
+                            description:
+                              "Overall completion percentage across all goals (0-100)",
+                            example: 20.0,
+                          },
+                          thisperiod: {
+                            type: "number",
+                            description:
+                              "Completion percentage for goals in the current period (0-100)",
+                            example: 25.0,
+                          },
+                          trend: {
+                            type: "number",
+                            description:
+                              "Percentage point change in completion rate compared to previous period (can be positive or negative)",
+                            example: 5.0,
+                          },
+                        },
+                      },
+                      categoryBreakdown: {
+                        type: "array",
+                        description:
+                          "Top 5 categories based on goal tags with completion statistics",
+                        items: {
+                          type: "object",
+                          properties: {
+                            category: {
+                              type: "string",
+                              description:
+                                "Category name (uppercased from goal tags)",
+                              example: "FITNESS",
+                            },
+                            count: {
+                              type: "number",
+                              description: "Number of goals in this category",
+                              example: 6,
+                            },
+                            completionRate: {
+                              type: "number",
+                              description:
+                                "Percentage of completed goals in this category (0-100)",
+                              example: 33.3,
+                            },
+                          },
+                        },
+                        example: [
+                          {
+                            category: "FITNESS",
+                            count: 6,
+                            completionRate: 33.3,
+                          },
+                          {
+                            category: "LEARNING",
+                            count: 5,
+                            completionRate: 20.0,
+                          },
+                          {
+                            category: "HEALTH",
+                            count: 4,
+                            completionRate: 25.0,
+                          },
+                        ],
+                      },
+                    },
+                  },
+                  message: {
+                    type: "string",
+                    example: "Goals summary retrieved successfully",
+                  },
+                },
+              },
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized - Missing or invalid authentication token",
+        },
+        403: {
+          description: "Forbidden - Insufficient permissions to view summary",
+        },
         500: { description: "Internal Server Error" },
         503: { description: "Service Unavailable - Database connection error" },
       },

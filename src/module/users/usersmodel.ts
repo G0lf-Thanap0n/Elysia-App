@@ -33,12 +33,14 @@ export const UpdateUserBody = t.Partial(
     user_lastname: t.String({ minLength: 1, maxLength: 50 }),
     user_username: t.String({ minLength: 1, maxLength: 50 }),
     user_email: t.String({ format: "email" }),
-    user_image: t
-      .File({
+    user_image: t.Union([
+      t.File({
         mimeTypes: ["image/jpeg", "image/png"],
         maxSize: 5 * 1024 * 1024,
-      })
-      .nullish(),
+      }),
+      t.Null(),
+      t.Undefined(),
+    ]),
   }),
 );
 
