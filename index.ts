@@ -7,6 +7,7 @@ import { userRoute } from "./src/module/users/users.route";
 import { goalRoute } from "./src/module/goals/goals.route";
 import { auth } from "./utils/betterauth";
 import { htmlPage } from "./utils/landingPage";
+import { cloudinaryPlugin } from "./config/cloudinary";
 
 const app = new Elysia()
   .use(
@@ -63,6 +64,7 @@ const app = new Elysia()
     }),
   )
   .use(mongoosesPlugin())
+  .use(cloudinaryPlugin)
 
   // better auth
   // .mount(auth.handler)

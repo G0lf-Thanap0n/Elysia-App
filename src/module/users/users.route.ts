@@ -409,9 +409,11 @@ export const userRoute = new Elysia({ prefix: "/api/users" })
    */
   .patch("/update/:id", updateUser, {
     body: UpdateUserBody,
+    type: "formData",
     detail: {
-      summary: "Update a single user by id",
-      description: "Update a single user by id",
+      summary: "Update user profile",
+      description:
+        "Update a user's profile details including name, username, email, and optional profile image. All fields are optional - only provided fields will be updated. Supports image upload in JPEG or PNG format (max 5MB). Send null for user_image to remove existing profile picture.",
       tags: ["Users"],
       security: [
         {
@@ -423,7 +425,7 @@ export const userRoute = new Elysia({ prefix: "/api/users" })
           name: "id",
           in: "path",
           description:
-            "Unique identifier of the user to update (MongoDB ObjectId format)",
+            "Unique MongoDB ObjectId of the user to update (24-character hexadecimal string)",
           required: true,
           example: "507f1f77bcf86cd799439011",
           schema: {
@@ -434,71 +436,112 @@ export const userRoute = new Elysia({ prefix: "/api/users" })
       ],
       requestBody: {
         required: true,
-        description: "User update data payload",
+        description:
+          "User profile update payload with optional fields (FormData format for image support)",
         content: {
-          "application/json": {
+          "multipart/form-data": {
             schema: {
               type: "object",
-              required: [
-                "user_name",
-                "user_lastname",
-                "user_username",
-                "user_email",
-              ],
               properties: {
                 user_name: {
                   type: "string",
-                  description: "The user's first name",
-                  example: "John",
+                  description: "User's first name (1-50 characters)",
+                  minLength: 1,
+                  maxLength: 50,
+                  example: "Jane",
                 },
                 user_lastname: {
                   type: "string",
-                  description: "The user's last name",
-                  example: "Doe",
+                  description: "User's last name (1-50 characters)",
+                  minLength: 1,
+                  maxLength: 50,
+                  example: "Smith",
                 },
                 user_username: {
                   type: "string",
-                  description: "The user's username",
-                  example: "johndoe",
+                  description: "Unique username for the user (1-50 characters)",
+                  minLength: 1,
+                  maxLength: 50,
+                  example: "janesmith",
                 },
                 user_email: {
                   type: "string",
-                  description: "The user's email address",
-                  example: "johndoe@example.com",
+                  format: "email",
+                  description: "User's email address",
+                  example: "jane.smith@example.com",
+                },
+                user_image: {
+                  type: "string",
+                  format: "binary",
+                  description:
+                    "User's profile image (JPEG or PNG, max 5MB). Send as null to delete existing image.",
+                  contentMediaType: "image/jpeg, image/png",
                 },
               },
             },
             example: {
-              user_name: "John",
-              user_lastname: "Doe",
-              user_username: "johndoe",
-              user_email: "johndoe@example.com",
+              user_name: "Jane",
+              user_lastname: "Smith",
+              user_username: "janesmith",
+              user_email: "jane.smith@example.com",
             },
           },
         },
       },
       responses: {
         200: {
-          description: "Successful response with the updated user data",
+          description: "User profile updated successfully",
           content: {
             "application/json": {
               schema: {
                 type: "object",
                 properties: {
-                  success: { type: "boolean", example: true },
+                  status: {
+                    type: "string",
+                    example: "success",
+                    description: "Response status indicator",
+                  },
                   message: {
                     type: "string",
                     example: "User updated successfully",
+                    description: "Success message",
                   },
                   data: {
                     type: "object",
+                    description: "Complete updated user object",
                     properties: {
-                      user_name: { type: "string", example: "John" },
-                      user_lastname: { type: "string", example: "Doe" },
-                      user_username: { type: "string", example: "johndoe" },
+                      _id: {
+                        type: "string",
+                        example: "507f1f77bcf86cd799439011",
+                      },
+                      user_name: {
+                        type: "string",
+                        example: "Jane",
+                      },
+                      user_lastname: {
+                        type: "string",
+                        example: "Smith",
+                      },
+                      user_username: {
+                        type: "string",
+                        example: "janesmith",
+                      },
                       user_email: {
                         type: "string",
-                        example: "johndoe@example.com",
+                        example: "janesmith@example.com",
+                      },
+                      user_image: {
+                        type: "string",
+                        example: "https://example.com/images/user123.jpg",
+                        nullable: true,
+                      },
+                      createdAt: {
+                        type: "string",
+                        format: "date-time",
+                      },
+                      updatedAt: {
+                        type: "string",
+                        format: "date-time",
                       },
                     },
                   },
@@ -507,12 +550,29 @@ export const userRoute = new Elysia({ prefix: "/api/users" })
             },
           },
         },
-        400: { description: "Bad Request - Invalid data" },
-        401: { description: "Unauthorized - Missing or invalid token" },
-        403: { description: "Forbidden - Insufficient permissions" },
-        404: { description: "Not Found - User not found" },
-        500: { description: "Internal Server Error" },
-        503: { description: "Service Unavailable - Database connection error" },
+        400: {
+          description:
+            "Bad Request - Invalid input data (invalid email format, file too large, unsupported image type)",
+        },
+        401: {
+          description:
+            "Unauthorized - Missing, invalid, or expired authentication token",
+        },
+        403: {
+          description:
+            "Forbidden - Insufficient permissions to update this user",
+        },
+        404: {
+          description:
+            "Not Found - User with specified ID does not exist in the database",
+        },
+        500: {
+          description: "Internal Server Error - Unexpected error during update",
+        },
+        503: {
+          description:
+            "Service Unavailable - Database connection error or image upload service unavailable",
+        },
       },
     },
   })

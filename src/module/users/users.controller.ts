@@ -6,6 +6,7 @@ import {
   SignupBodyType,
   UpdateUserBodyType,
 } from "./usersmodel";
+import { deleteImage, uploadImage } from "../../../utils/uploadImage";
 
 // ----------------------------- SIGNUP CONTROLLER -----------------------------
 /**
@@ -256,7 +257,9 @@ export const updateUser = async ({
     const { user_name, user_lastname, user_username, user_email, user_image } =
       body;
 
-    const user = await User.findById(id);
+    const user = await User.findById(id).select(
+      "-user_role -user_active -user_password -user_goals",
+    );
 
     // check if user exists
     if (!user) {
@@ -269,12 +272,28 @@ export const updateUser = async ({
       return { status: "error", message: "No body provided" };
     }
 
+    // check for image
+    if (user_image instanceof File) {
+      // delete old image
+      if (user.user_image) {
+        await deleteImage(user.user_image);
+      }
+      // upload new image
+      user.user_image = await uploadImage(user_image);
+    } else if (user_image === null) {
+      // send null to delete image
+      if (user.user_image) {
+        await deleteImage(user.user_image);
+      }
+      // set user image to null in DB
+      user.user_image = null;
+    }
+
     // update user details
-    user.user_name = user_name || user.user_name;
-    user.user_lastname = user_lastname || user.user_lastname;
-    user.user_username = user_username || user.user_username;
-    user.user_email = user_email || user.user_email;
-    user.user_image = user_image || user.user_image;
+    user.user_name = user_name ?? user.user_name;
+    user.user_lastname = user_lastname ?? user.user_lastname;
+    user.user_username = user_username ?? user.user_username;
+    user.user_email = user_email ?? user.user_email;
     const updatedUser = await user.save();
 
     if (!updatedUser) {
@@ -328,6 +347,7 @@ export const logoutUser = async ({
     };
   } catch (err) {
     console.error("Error during logout:", err);
+
     set.status = 500;
     return { error: "Internal Server error" };
   }
