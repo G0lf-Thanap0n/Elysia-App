@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import type { JWTPayload } from "jose";
 import { CreateGoalBodyType, PeriodEnumQueryType } from "./goalsmodel";
 import { getPreviousPeriodRange, getStartDate } from "../../../utils/period";
+import { User } from "../../../model/userModel";
 
 // User context type from auth middleware
 type UserContext = { user: JWTPayload & { id?: string } };
@@ -252,7 +253,17 @@ export const createGoal = async ({
       goal_isPublic = false,
     } = body;
 
-    const createdGoal = await Goal.create({
+    // const createdGoal = await Goal.create({
+    //   goal_title,
+    //   goal_description,
+    //   goal_smart,
+    //   goal_status,
+    //   user_id: user.id,
+    //   goal_tags,
+    //   goal_isPublic,
+    // });
+
+    const createdGoal = new Goal({
       goal_title,
       goal_description,
       goal_smart,
@@ -261,12 +272,17 @@ export const createGoal = async ({
       goal_tags,
       goal_isPublic,
     });
+    await createdGoal.save();
+
+    await User.findByIdAndUpdate(user.id, {
+      $push: { goals: createdGoal._id },
+    });
 
     set.status = 201;
     return {
       success: true,
-      data: createdGoal,
       message: "Goal created successfully",
+      data: createdGoal,
     };
   } catch (err) {
     if (err instanceof mongoose.Error.ValidationError) {
@@ -393,8 +409,8 @@ export const deleteGoalById = async ({ params, set }: Context) => {
     set.status = 200;
     return {
       success: true,
-      data: goal,
       message: "Goal deleted successfully",
+      data: goal,
     };
   } catch (err) {
     console.error("Error during deleting goal:", err);
