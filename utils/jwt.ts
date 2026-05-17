@@ -1,12 +1,19 @@
 import * as jose from "jose";
 
+export type UserRole = "User" | "Admin";
+
+export interface JWTUserPayload extends jose.JWTPayload {
+  id: string;
+  role: UserRole;
+}
+
 const secret = new TextEncoder().encode(Bun.env.JWT_SECRET || "secret");
 if (!secret) {
   throw new Error("Missing JWT_SECRET");
 }
 
 type JWT = {
-  data: jose.JWTPayload;
+  data: JWTUserPayload;
   exp?: string | number;
 };
 
@@ -17,8 +24,10 @@ export const sign = async ({ data, exp = "7d" }: JWT) =>
     .setExpirationTime(exp) // set the expiration time for the token
     .sign(secret);
 
-export const verify = async (jwt: string) =>
-  (await jose.jwtVerify(jwt, secret)).payload;
+export const verify = async (jwt: string): Promise<JWTUserPayload> => {
+  const { payload } = await jose.jwtVerify(jwt, secret);
+  return payload as JWTUserPayload;
+};
 
 export const jwt = {
   sign,

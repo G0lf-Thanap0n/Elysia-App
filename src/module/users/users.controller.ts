@@ -7,6 +7,7 @@ import {
   UpdateUserBodyType,
 } from "./usersmodel";
 import { deleteImage, uploadImage } from "../../../utils/uploadImage";
+import { AuthContext } from "../../../types/auth.types";
 
 // ----------------------------- SIGNUP CONTROLLER -----------------------------
 /**
@@ -55,13 +56,9 @@ export const signupUser = async ({
 
     // Generate token
     const accessToken = await jwt.sign({
-      data: { id: newUser._id.toString() },
+      data: { id: newUser._id.toString(), role: newUser.user_role },
       exp: "15m",
     });
-
-    // Set user active status to true in DB
-    newUser.user_active = true;
-    await newUser.save();
 
     // respond with user data and token successfully
     set.status = 201;
@@ -92,14 +89,16 @@ export const signupUser = async ({
  * @description Get all users
  * @action admin
  */
-export const getAllUsers = async ({ set }: Context) => {
+export const getAllUsers = async ({ set, query }: Context) => {
   try {
-    const users = await User.find().select("-user_password");
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-    if (!users || users.length === 0) {
-      set.status = 404;
-      return { error: "No users found" };
-    }
+    const [users, total] = await Promise.all([
+      User.find().select("-user_password").skip(skip).limit(limit).lean(),
+      User.countDocuments(),
+    ]);
 
     // Return users
     set.status = 200;
@@ -107,6 +106,13 @@ export const getAllUsers = async ({ set }: Context) => {
       status: "success",
       message: "Users fetched successfully",
       data: users,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page < Math.ceil(total / limit),
+      },
     };
   } catch (err) {
     console.error("Error during fetching users:", err);
@@ -126,7 +132,7 @@ export const getUserById = async ({ params, set }: Context) => {
   const { id } = params;
   try {
     // Find user by ID
-    const user = await User.findById(id).select("-user_password");
+    const user = await User.findById(id).select("-user_password").lean();
     if (!user) {
       set.status = 404;
       return { error: "User not found" };
@@ -166,30 +172,21 @@ export const loginUser = async ({
       return { error: "No body provided" };
     }
 
+    // Destructure email and password from body
     const { user_email, user_password } = body;
 
-    if (!user_email || !user_password) {
-      set.status = 400;
-      return { error: "Email and Password are required" };
-    }
-
-    // Check user by email
+    // Find user by email
     const user = await User.findOne({ user_email });
-    if (!user) {
-      set.status = 401;
-      return { error: "Invalid email" };
-    }
 
-    // Check password
-    const isMatch = await user.matchPassword(user_password);
-    if (!isMatch) {
+    // Check if user exists and password matches
+    if (!user || !(await user.matchPassword(user_password))) {
       set.status = 401;
-      return { error: "Invalid password" };
+      return { error: "Invalid email or password" };
     }
 
     // Generate token
     const accessToken = await jwt.sign({
-      data: { id: user._id.toString() },
+      data: { id: user._id.toString(), role: user.user_role },
       exp: "15m",
     });
 
@@ -219,7 +216,6 @@ export const loginUser = async ({
 
     set.status = 200;
     return {
-      status: set.status,
       success: true,
       data: { accessToken },
       user: {
@@ -251,55 +247,59 @@ export const updateUser = async ({
   params,
   body,
   set,
-}: Context<{ body: UpdateUserBodyType }>) => {
+  user,
+}: AuthContext & { body: UpdateUserBodyType }) => {
   try {
     const { id } = params;
     const { user_name, user_lastname, user_username, user_email, user_image } =
       body;
-
-    const user = await User.findById(id).select(
-      "-user_role -user_active -user_password -user_goals",
-    );
-
-    // check if user exists
-    if (!user) {
-      set.status = 404;
-      return { status: "error", message: "User not found" };
-    }
 
     // check for body
     if (!body) {
       return { status: "error", message: "No body provided" };
     }
 
+    // Check user is owner of the profile or admin
+    if (id !== user.id && user.role !== "Admin") {
+      set.status = 403;
+      return { error: "Forbidden: You can only update your own profile" };
+    }
+
+    const currentuser = await User.findById(id).select(
+      "-user_role -user_active -user_password -user_goals",
+    );
+
+    // check if user exists
+    if (!currentuser) {
+      set.status = 404;
+      return { status: "error", message: "User not found" };
+    }
+
     // check for image
     if (user_image instanceof File) {
       // delete old image
-      if (user.user_image) {
-        await deleteImage(user.user_image);
+      if (currentuser.user_image) {
+        await deleteImage(currentuser.user_image);
       }
       // upload new image
-      user.user_image = await uploadImage(user_image);
+      currentuser.user_image = await uploadImage(user_image);
     } else if (user_image === null) {
       // send null to delete image
-      if (user.user_image) {
-        await deleteImage(user.user_image);
+      if (currentuser.user_image) {
+        await deleteImage(currentuser.user_image);
       }
       // set user image to null in DB
-      user.user_image = null;
+      currentuser.user_image = null;
     }
 
     // update user details
-    user.user_name = user_name ?? user.user_name;
-    user.user_lastname = user_lastname ?? user.user_lastname;
-    user.user_username = user_username ?? user.user_username;
-    user.user_email = user_email ?? user.user_email;
-    const updatedUser = await user.save();
+    currentuser.user_name = user_name ?? currentuser.user_name;
+    currentuser.user_lastname = user_lastname ?? currentuser.user_lastname;
+    currentuser.user_username = user_username ?? currentuser.user_username;
+    currentuser.user_email = user_email ?? currentuser.user_email;
 
-    if (!updatedUser) {
-      set.status = 400;
-      return { status: "error", message: "User update failed" };
-    }
+    // save updated user
+    const updatedUser = await currentuser.save();
 
     // return updated user
     set.status = 200;
@@ -325,7 +325,7 @@ export const updateUser = async ({
 export const logoutUser = async ({
   set,
   cookie: { access_token },
-}: Context) => {
+}: AuthContext) => {
   try {
     const user = await User.findOne({ user_active: true });
     if (!user) {
@@ -359,7 +359,7 @@ export const logoutUser = async ({
  * @description Delete a single user
  * @action public
  */
-export const deleteUser = async ({ params, set }: Context) => {
+export const deleteUser = async ({ params, set }: AuthContext) => {
   const { id } = params;
   try {
     const deleted = await User.findByIdAndDelete(id);

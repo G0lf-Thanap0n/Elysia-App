@@ -13,7 +13,7 @@ export const authplugin = new Elysia({ name: "auth" }).derive(
 
     try {
       const payload = await jwt.verify(token);
-      return { user: payload };
+      return { user: { id: payload.id, role: payload.role } };
     } catch (err) {
       set.status = 401;
       throw new Error("Invalid token or expired token");

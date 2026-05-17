@@ -2,12 +2,14 @@ import { Context } from "elysia";
 import { Goal } from "../../../model/goalModel";
 import mongoose from "mongoose";
 import type { JWTPayload } from "jose";
-import { CreateGoalBodyType, PeriodEnumQueryType } from "./goalsmodel";
+import {
+  CreateGoalBodyType,
+  PeriodEnumQueryType,
+  UpdateGoalBodyType,
+} from "./goalsmodel";
 import { getPreviousPeriodRange, getStartDate } from "../../../utils/period";
 import { User } from "../../../model/userModel";
-
-// User context type from auth middleware
-type UserContext = { user: JWTPayload & { id?: string } };
+import { AuthContext } from "../../../types/auth.types";
 
 // ----------------------------- Get All Goals Controller -----------------------------
 /**
@@ -15,11 +17,7 @@ type UserContext = { user: JWTPayload & { id?: string } };
  * @description get all goals
  * @action admin
  */
-export const getAllGoals = async ({
-  set,
-  user,
-  query,
-}: Context & UserContext) => {
+export const getAllGoals = async ({ set, user, query }: AuthContext) => {
   // pagination params
   const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 10;
@@ -74,7 +72,7 @@ export const getAllGoalsSummary = async ({
   set,
   user,
   query,
-}: Context<{ query: { period?: PeriodEnumQueryType } }> & UserContext) => {
+}: Context<{ query: { period?: PeriodEnumQueryType } }> & AuthContext) => {
   // validate user ID
   if (!user.id) {
     set.status = 401;
@@ -163,6 +161,7 @@ export const getAllGoalsSummary = async ({
     set.status = 200;
     return {
       success: true,
+      message: "Goals summary retrieved successfully",
       data: {
         period,
         generatedAt: new Date().toISOString(),
@@ -174,7 +173,6 @@ export const getAllGoalsSummary = async ({
         },
         categoryBreakdown,
       },
-      message: "Goals summary retrieved successfully",
     };
   } catch (err) {
     console.error("Error during fetching goals summary:", err);
@@ -195,7 +193,7 @@ export const getAllGoalsSummary = async ({
  * @description get goal by id
  * @action public
  */
-export const getGoalById = async ({ params, set }: Context) => {
+export const getGoalById = async ({ params, set }: AuthContext) => {
   const { id } = params;
   try {
     // find goal by id
@@ -236,7 +234,7 @@ export const createGoal = async ({
   body,
   set,
   user,
-}: Context<{ body: CreateGoalBodyType }> & UserContext) => {
+}: Context<{ body: CreateGoalBodyType }> & AuthContext) => {
   try {
     // Verify user is authenticated
     if (!user?.id) {
@@ -275,7 +273,7 @@ export const createGoal = async ({
     await createdGoal.save();
 
     await User.findByIdAndUpdate(user.id, {
-      $push: { goals: createdGoal._id },
+      $push: { user_goals: createdGoal._id },
     });
 
     set.status = 201;
@@ -306,26 +304,27 @@ export const createGoal = async ({
  * @description update goal by id
  * @action public
  */
-interface UpdateGoalBody {
-  goal_title?: string;
-  goal_description?: string;
-  goal_smart?: {
-    smart_specific?: string;
-    smart_measurable?: string;
-    smart_achievable?: string;
-    smart_relevant?: string;
-    smart_timeBound?: string;
-  };
-  goal_status?: "not started" | "in progress" | "completed";
-  goal_tags?: string[];
-  goal_isPublic?: boolean;
-}
+// interface UpdateGoalBody {
+//   goal_title?: string;
+//   goal_description?: string;
+//   goal_smart?: {
+//     smart_specific?: string;
+//     smart_measurable?: string;
+//     smart_achievable?: string;
+//     smart_relevant?: string;
+//     smart_timeBound?: string;
+//   };
+//   goal_status?: "not started" | "in progress" | "completed";
+//   goal_tags?: string[];
+//   goal_isPublic?: boolean;
+// }
 
 export const updateGoalById = async ({
   params,
   body,
   set,
-}: Context<{ body: UpdateGoalBody }>) => {
+  user,
+}: Context<{ body: UpdateGoalBodyType }> & AuthContext) => {
   try {
     const { id } = params;
     const {
@@ -337,17 +336,22 @@ export const updateGoalById = async ({
       goal_isPublic,
     } = body;
 
-    const goal = await Goal.findById(id);
+    if (!body) {
+      set.status = 400;
+      return { error: "No data provided for update" };
+    }
 
     // check if goal exists
+    const goal = await Goal.findById(id);
     if (!goal) {
       set.status = 404;
       return { error: "Goal not found" };
     }
 
-    if (!body) {
-      set.status = 400;
-      return { error: "No data provided for update" };
+    // Check user is owner of the goal or admin
+    if (goal.user_id?.toString() !== user.id && user.role !== "Admin") {
+      set.status = 403;
+      return { error: "Forbidden - This is not your goal" };
     }
 
     //update goal details
@@ -402,10 +406,35 @@ export const updateGoalById = async ({
  * @description delete goal by id
  * @action public
  */
-export const deleteGoalById = async ({ params, set }: Context) => {
+export const deleteGoalById = async ({ params, set, user }: AuthContext) => {
   const { id } = params;
+
   try {
-    const goal = await Goal.findByIdAndDelete(id);
+    // verify user is authenticated
+    if (!user?.id) {
+      set.status = 401;
+      return { error: "Unauthorized - User not authenticated" };
+    }
+
+    // find goal by id and check ownership
+    const goal = await Goal.findById(id);
+    if (!goal) {
+      set.status = 404;
+      return { error: "Goal not found" };
+    }
+
+    // Check user is owner of the goal or admin
+    if (goal.user_id !== user.id) {
+      set.status = 403;
+      return { error: "Unauthorized to delete this goal" };
+    }
+
+    // delete goal by id in Goal collection
+    await Goal.findByIdAndDelete(id);
+
+    // delete user's reference to goal in User collection
+    await User.findByIdAndUpdate(user.id, { $pull: { user_goals: id } });
+
     set.status = 200;
     return {
       success: true,
